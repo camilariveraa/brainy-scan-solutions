@@ -1,14 +1,48 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Camera, Sparkles } from "lucide-react";
-import heroAnalysis from "@/assets/hero-analysis.png";
+import { Input } from "@/components/ui/input";
+import { Sparkles, Link as LinkIcon, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export const Hero = () => {
-  const scrollToUpload = () => {
-    document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const [imageUrl, setImageUrl] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const scrollToHowItWorks = () => {
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!imageUrl.trim()) {
+      toast.error("Please enter an image URL");
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(imageUrl);
+    } catch {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+
+    setPreviewUrl(imageUrl);
+    setIsProcessing(true);
+
+    // Simulate processing stages
+    const stages = [
+      { message: "Extracting text...", duration: 800 },
+      { message: "Identifying subject...", duration: 600 },
+      { message: "Parsing questions...", duration: 700 },
+      { message: "Generating solutions...", duration: 900 },
+    ];
+
+    for (const stage of stages) {
+      toast.loading(stage.message, { duration: stage.duration });
+      await new Promise(resolve => setTimeout(resolve, stage.duration));
+    }
+
+    setIsProcessing(false);
+    toast.success("Solution ready! (Demo mode - connect backend to see real results)");
   };
 
   return (
@@ -41,26 +75,6 @@ export const Hero = () => {
               Upload any homework photo. Get instant, step-by-step solutions powered by advanced AI vision.
             </p>
 
-            <div className="flex flex-wrap gap-4">
-              <Button 
-                size="lg" 
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-lg px-8 py-6 shadow-glow-accent transition-all hover:scale-105"
-                onClick={scrollToUpload}
-              >
-                <Camera className="mr-2 h-5 w-5" />
-                Solve My Homework
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="border-cobalt text-cobalt hover:bg-cobalt hover:text-cobalt-foreground font-semibold text-lg px-8 py-6 transition-all hover:scale-105"
-                onClick={scrollToHowItWorks}
-              >
-                See How It Works
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-
             <div className="mt-12 flex flex-wrap items-center gap-8 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-turquoise animate-glow-pulse" />
@@ -73,29 +87,68 @@ export const Hero = () => {
             </div>
           </div>
 
-          {/* Right visual */}
+          {/* Right upload interface */}
           <div className="relative animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <div className="relative rounded-lg overflow-hidden border border-primary/20 shadow-glow">
-              <img 
-                src={heroAnalysis} 
-                alt="AI analyzing homework with scan effects" 
-                className="w-full h-auto"
-              />
-              {/* Scanning line effect overlay */}
-              <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none">
-                <div className="absolute inset-x-0 h-1 bg-primary/50 animate-scan-line shadow-glow" />
-              </div>
-            </div>
+            <div className="bg-card border border-border rounded-lg p-8 shadow-glow">
+              <h3 className="text-2xl font-bold mb-6">Upload Homework Image</h3>
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="imageUrl" className="block text-sm font-medium mb-2">
+                    Image URL
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="imageUrl"
+                        type="url"
+                        placeholder="https://example.com/homework.jpg"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="pl-10"
+                        disabled={isProcessing}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Paste the URL of your homework image
+                  </p>
+                </div>
 
-            {/* Floating info cards */}
-            <div className="absolute -bottom-6 -left-6 bg-card border border-border rounded-lg p-4 shadow-lg animate-float backdrop-blur-sm">
-              <div className="text-xs text-muted-foreground mb-1">Processing Speed</div>
-              <div className="text-2xl font-bold text-turquoise">2.3s</div>
-            </div>
+                {previewUrl && (
+                  <div className="rounded-lg overflow-hidden border border-border">
+                    <img
+                      src={previewUrl}
+                      alt="Homework preview"
+                      className="w-full h-auto max-h-96 object-contain bg-muted"
+                      onError={() => {
+                        toast.error("Failed to load image. Please check the URL.");
+                        setPreviewUrl(null);
+                      }}
+                    />
+                  </div>
+                )}
 
-            <div className="absolute -top-6 -right-6 bg-card border border-border rounded-lg p-4 shadow-lg animate-float backdrop-blur-sm" style={{ animationDelay: '1s' }}>
-              <div className="text-xs text-muted-foreground mb-1">AI Confidence</div>
-              <div className="text-2xl font-bold text-secondary">99.2%</div>
+                <Button
+                  type="submit"
+                  disabled={isProcessing || !imageUrl.trim()}
+                  size="lg"
+                  className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-lg py-6 shadow-glow-accent"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Processing Homework...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      Solve Homework
+                    </>
+                  )}
+                </Button>
+              </form>
             </div>
           </div>
         </div>
